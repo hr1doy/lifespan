@@ -1,0 +1,381 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  ArrowRight, RefreshCcw, Moon, Calendar, Clock, PieChart, 
+  Heart, Wind, Users, Globe, Rocket, Zap, Hourglass 
+} from 'lucide-react';
+
+export default function App() {
+  const [birthDate, setBirthDate] = useState('');
+  const [view, setView] = useState('input'); // 'input' | 'visualizer'
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleStart = (e) => {
+    e.preventDefault();
+    if (birthDate) {
+      setView('visualizer');
+    }
+  };
+
+  const handleReset = () => {
+    setView('input');
+    setBirthDate('');
+  };
+
+  if (!mounted) return null;
+
+  return (
+    <div className="min-h-screen bg-stone-50 text-stone-800 font-sans selection:bg-stone-200">
+      <div className="max-w-5xl mx-auto px-6 py-12 min-h-screen flex flex-col">
+        
+        {/* Header - Branding Restored with New Name */}
+        <header className="flex justify-between items-center mb-8 opacity-60 h-8">
+          <h1 className="text-sm font-medium tracking-widest uppercase">Life in months</h1>
+          {view === 'visualizer' && (
+            <button 
+              onClick={handleReset}
+              className="flex items-center gap-2 text-sm hover:text-stone-900 transition-colors"
+            >
+              <RefreshCcw size={14} />
+              <span>start over</span>
+            </button>
+          )}
+        </header>
+
+        {/* Main Content Area */}
+        <main className="flex-grow flex flex-col justify-center">
+          {view === 'input' ? (
+            <InputView 
+              birthDate={birthDate} 
+              setBirthDate={setBirthDate} 
+              onNext={handleStart} 
+            />
+          ) : (
+            <VisualizerView birthDate={birthDate} />
+          )}
+        </main>
+
+        {/* Footer */}
+        <footer className="mt-20 text-center text-stone-400 text-xs">
+          <p>assuming a 75-year lifespan • pause and reflect</p>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+// Step 1: Input View
+const InputView = ({ birthDate, setBirthDate, onNext }) => {
+  return (
+    <div className="w-full max-w-md mx-auto animate-fade-in-up">
+      <h2 className="text-3xl md:text-4xl font-light mb-8 leading-tight text-stone-800">
+        To understand where you are, <br/>
+        we first need to know when you began.
+      </h2>
+      
+      <form onSubmit={onNext} className="space-y-8">
+        <div className="flex flex-col gap-2">
+          <label htmlFor="birthdate" className="text-sm text-stone-500 font-medium ml-1">
+            enter your birth date
+          </label>
+          <input
+            id="birthdate"
+            type="date"
+            required
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+            className="w-full bg-transparent border-b-2 border-stone-200 py-3 text-2xl md:text-3xl text-stone-800 focus:outline-none focus:border-stone-800 transition-colors placeholder-stone-300"
+          />
+        </div>
+
+        <button 
+          type="submit"
+          disabled={!birthDate}
+          className="group flex items-center gap-3 text-lg font-medium text-stone-800 disabled:opacity-30 disabled:cursor-not-allowed hover:gap-5 transition-all duration-300"
+        >
+          See your life
+          <ArrowRight size={20} className="stroke-[1.5]" />
+        </button>
+      </form>
+    </div>
+  );
+};
+
+// Step 2: Visualization View
+const VisualizerView = ({ birthDate }) => {
+  const stats = useMemo(() => calculateLifeStats(birthDate), [birthDate]);
+  
+  // Grid generation: 75 years * 52 weeks
+  const totalYears = 75;
+  const weeksPerYear = 52;
+  const totalWeeks = totalYears * weeksPerYear;
+  
+  // Create an array for the weeks
+  const weeks = useMemo(() => {
+    return Array.from({ length: totalWeeks }, (_, i) => ({
+      id: i,
+      lived: i < stats.weeksLived,
+      current: i === stats.weeksLived
+    }));
+  }, [stats.weeksLived, totalWeeks]);
+
+  return (
+    <div className="animate-fade-in space-y-12">
+      
+      {/* 1. Header Narrative */}
+      <section>
+        <h2 className="text-3xl md:text-4xl font-light mb-4 text-stone-900">
+          Your life in months.
+        </h2>
+        <div className="flex flex-wrap gap-6 text-stone-500 text-sm md:text-base">
+          <span className="flex items-center gap-2">
+            <PieChart size={16} /> {stats.percentageLived}% complete
+          </span>
+          <span className="flex items-center gap-2 text-stone-400">
+             <Hourglass size={16} /> {stats.percentageLeft}% remaining
+          </span>
+        </div>
+      </section>
+
+      {/* 2. The Grid */}
+      <section className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-stone-100">
+        <div className="flex justify-between items-end mb-6">
+           <div className="text-xs font-medium text-stone-400 uppercase tracking-wider flex items-center gap-2">
+             <div className="w-2 h-2 rounded-full bg-stone-800"></div> Lived
+             <div className="w-2 h-2 rounded-full bg-stone-200 ml-2"></div> Future
+           </div>
+          <span className="text-xs font-medium text-stone-400 uppercase tracking-wider">75 Years</span>
+        </div>
+        
+        <div className="flex flex-wrap gap-[3px] md:gap-1 content-start">
+          {weeks.map((week) => (
+            <div
+              key={week.id}
+              className={`
+                w-1 h-1 md:w-1.5 md:h-1.5 rounded-full md:rounded-sm transition-all duration-500
+                ${week.lived ? 'bg-stone-800' : 'bg-stone-200'}
+                ${week.current ? 'animate-pulse bg-stone-500 scale-150' : ''}
+              `}
+              title={week.lived ? 'Week lived' : 'Week remaining'}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* 3. Detailed Stats Cards */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {/* Card 1: Biological (Top Left) */}
+        <StatCard title="Biological Rhythms" icon={<Heart size={20} className="text-stone-400" />}>
+           <StatItem 
+            label="Heartbeats" 
+            value={stats.heartbeats} 
+            subtext="approximate times your heart has beaten"
+          />
+          <StatItem 
+            label="Breaths Taken" 
+            value={stats.breaths} 
+            subtext="inhales and exhales since birth"
+          />
+           <StatItem 
+            label="Sleep" 
+            value={`${stats.hoursSlept} hours`} 
+            subtext={`you've slept about ${stats.monthsSlept.toLocaleString()} months`}
+          />
+        </StatCard>
+
+        {/* Card 2: Time & Nature (Top Right) */}
+         <StatCard title="Time & Nature" icon={<Globe size={20} className="text-stone-400" />}>
+          <StatItem 
+            label="Months Lived" 
+            value={stats.monthsLived.toLocaleString()} 
+            subtext="total months passed since birth"
+          />
+           <StatItem 
+            label="Life in Seconds" 
+            value={stats.secondsLivedDisplay} 
+            subtext="total seconds elapsed"
+          />
+          <StatItem 
+            label="Lunar Cycles" 
+            value={stats.lunarCycles} 
+            subtext="full moons witnessed"
+          />
+        </StatCard>
+
+        {/* Card 3: Societal Context (Bottom Left) */}
+        <StatCard title="Societal Context" icon={<Users size={20} className="text-stone-400" />}>
+          <StatItem 
+            label="People Met" 
+            value={stats.peopleMet} 
+            subtext="estimated distinct face-to-face interactions"
+          />
+           <StatItem 
+            label="Human Growth" 
+            value={`+${stats.populationGrowth} people`} 
+            subtext="added to the global population since you were born"
+          />
+           <StatItem 
+            label="Generational Spot" 
+            value={stats.generation} 
+            subtext="your approximate generational cohort"
+          />
+        </StatCard>
+
+        {/* Card 4: Cosmic Perspective (Bottom Right) */}
+        <StatCard title="Cosmic Perspective" icon={<Rocket size={20} className="text-stone-400" />}>
+          <StatItem 
+            label="Solar Orbits" 
+            value={stats.yearsLived.toFixed(1)} 
+            subtext="trips around the sun"
+          />
+           <StatItem 
+            label="Distance Traveled" 
+            value={`${stats.distanceAroundSun} km`} 
+            subtext="traveled by Earth around the Sun"
+          />
+          <StatItem 
+            label="Galactic Journey" 
+            value={`${stats.distanceThroughGalaxy} km`} 
+            subtext="traveled by the Solar System through the Milky Way"
+          />
+        </StatCard>
+
+      </section>
+
+    </div>
+  );
+};
+
+const StatCard = ({ title, icon, children }) => (
+  <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-stone-100 h-full hover:shadow-md transition-shadow duration-500">
+    <div className="flex items-center gap-3 mb-8 pb-4 border-b border-stone-100">
+      {icon}
+      <h3 className="text-lg font-medium text-stone-800">{title}</h3>
+    </div>
+    <div className="space-y-8">
+      {children}
+    </div>
+  </div>
+);
+
+const StatItem = ({ label, value, subtext }) => (
+  <div>
+    <div className="text-2xl text-stone-800 font-light mb-1">{value}</div>
+    <div className="text-xs font-bold text-stone-400 uppercase tracking-wide mb-1">{label}</div>
+    <p className="text-sm text-stone-500 leading-snug">{subtext}</p>
+  </div>
+);
+
+// Helper Functions
+function calculateLifeStats(birthDateString) {
+  const birth = new Date(birthDateString);
+  const now = new Date();
+  
+  // Constants
+  const LIFESPAN_YEARS = 75;
+  const WEEKS_IN_YEAR = 52;
+  const TOTAL_WEEKS = LIFESPAN_YEARS * WEEKS_IN_YEAR;
+  
+  // Time Diff Calculations
+  const diffTime = Math.max(0, now - birth);
+  const yearsLived = diffTime / (1000 * 60 * 60 * 24 * 365.25);
+  const daysLived = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const weeksLived = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
+  const secondsLived = Math.floor(diffTime / 1000);
+
+  // 1. Core Time Stats
+  let monthsLived = (now.getFullYear() - birth.getFullYear()) * 12;
+  monthsLived -= birth.getMonth();
+  monthsLived += now.getMonth();
+  if (now.getDate() < birth.getDate()) monthsLived--;
+  monthsLived = Math.max(0, monthsLived);
+
+  // 2. Sleep Stats (Approx 8 hours/day = 1/3 of life)
+  const sleepRatio = 1/3;
+  const monthsSlept = Math.round(monthsLived * sleepRatio);
+  const hoursSlept = (daysLived * 8).toLocaleString();
+  const monthsLeft = Math.max(0, (LIFESPAN_YEARS * 12) - monthsLived);
+  const monthsToSleep = Math.round(monthsLeft * sleepRatio);
+
+  // 3. Percentages
+  const percentageLived = Math.min(100, Math.max(0, (weeksLived / TOTAL_WEEKS) * 100));
+  const percentageLeft = (100 - percentageLived).toFixed(1);
+
+  // 4. Biological Stats
+  // Avg Heart Rate ~80 bpm = ~42M/year
+  const heartbeats = Math.floor(yearsLived * 42000000).toLocaleString();
+  // Avg Breaths ~16/min = ~8.4M/year
+  const breaths = Math.floor(yearsLived * 8409600).toLocaleString();
+  
+  // 5. Cosmic Stats
+  // Earth orbit ~940 million km
+  const distanceAroundSun = (yearsLived * 940).toFixed(0) + " million";
+  // Solar system speed in galaxy ~220 km/s
+  const distanceThroughGalaxy = (secondsLived * 220 / 1000000).toFixed(0) + " million";
+
+  // 6. Natural & Societal
+  const seasonsObserved = Math.floor(yearsLived * 4);
+  const lunarCycles = Math.floor(daysLived / 29.53);
+  
+  // Avg person meets ~80,000 people in a lifetime (approx)
+  // Scaled linearly by age
+  const peopleMet = Math.floor((yearsLived / 75) * 80000).toLocaleString();
+
+  // Population growth approximation (Very rough global average growth)
+  // Assuming approx 80M growth per year in recent decades
+  const populationGrowth = (yearsLived * 80000000).toLocaleString();
+
+  // Generation helper
+  const year = birth.getFullYear();
+  let generation = "Generation Alpha";
+  if (year < 2010) generation = "Gen Z";
+  if (year < 1997) generation = "Millennial";
+  if (year < 1981) generation = "Gen X";
+  if (year < 1965) generation = "Baby Boomer";
+  if (year < 1946) generation = "Silent Generation";
+
+  return {
+    weeksLived,
+    monthsLived,
+    yearsLived,
+    monthsSlept,
+    hoursSlept,
+    monthsToSleep,
+    percentageLived: percentageLived.toFixed(1),
+    percentageLeft,
+    seasonsObserved,
+    heartbeats,
+    breaths,
+    distanceAroundSun,
+    distanceThroughGalaxy,
+    lunarCycles,
+    peopleMet,
+    populationGrowth,
+    generation,
+    secondsLivedDisplay: secondsLived.toLocaleString()
+  };
+}
+
+/* Tailwind Custom Animations (Inline for single file) */
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .animate-fade-in-up {
+    animation: fade-in-up 0.8s ease-out forwards;
+  }
+  .animate-fade-in {
+    animation: fade-in 1s ease-out forwards;
+  }
+`;
+document.head.appendChild(style);
